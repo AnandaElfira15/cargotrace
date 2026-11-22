@@ -17,7 +17,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('user', [AuthController::class, 'user']);
 
-    Route::apiResource('shipments', ShipmentController::class);
+    Route::apiResource('shipments', ShipmentController::class)->names('api.shipments');
 
     Route::get('shipments/{shipment}/tracking', [TrackingController::class, 'index']);
     Route::post('shipments/{shipment}/tracking', [TrackingController::class, 'store']);

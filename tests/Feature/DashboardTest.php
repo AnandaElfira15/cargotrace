@@ -41,9 +41,9 @@ class DashboardTest extends TestCase
             ->assertJsonPath('totals.delivered', 2)
             ->assertJsonPath('totals.delayed', 1)
             ->assertJsonPath('totals.open_exceptions', 1)
-            ->assertJsonPath('kpis.on_time_delivery_rate', 50.0)
-            ->assertJsonPath('kpis.average_delay_duration', 10.0)
-            ->assertJsonPath('kpis.exception_resolution_time', 6.0)
+            ->assertJsonPath('kpis.on_time_delivery_rate', 50)
+            ->assertJsonPath('kpis.average_delay_duration', 10)
+            ->assertJsonPath('kpis.exception_resolution_time', 6)
             ->assertJsonPath('by_carrier.labels.0', 'Blue Wave')
             ->assertJsonPath('by_carrier.values.0', 5);
     }
