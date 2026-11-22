@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: cargotrace
+      DB_USERNAME: cargotrace
+      DB_PASSWORD: ${DB_PASSWORD:-change-me-locally}
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      GROUP_SCENARIO: ${GROUP_SCENARIO:-a}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-password}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: cargotrace
+      MYSQL_USER: cargotrace
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change-me-locally}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change-me-root}
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  dbdata:
