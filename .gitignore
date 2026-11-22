@@ -18,3 +18,4 @@ Homestead.json
 Homestead.yaml
 auth.json
 database/*.sqlite
+.phpunit.result.cache
