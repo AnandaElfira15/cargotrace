@@ -18,4 +18,4 @@ done
 # Idempotent: skips shipments when data already exists
 php artisan db:seed --force
 
-exec php artisan serve --host=0.0.0.0 --port=8000
+exec php artisan serve --host=0.0.0.0 --port="${PORT:-8000}"

@@ -11,8 +11,8 @@ COPY --from=vendor /app/vendor ./vendor
 RUN npm install --no-audit --no-fund && npm run build
 
 FROM php:8.3-cli
-RUN apt-get update && apt-get install -y --no-install-recommends libzip-dev unzip \
-    && docker-php-ext-install pdo_mysql zip bcmath \
+RUN apt-get update && apt-get install -y --no-install-recommends libzip-dev libpq-dev unzip \
+    && docker-php-ext-install pdo_mysql pdo_pgsql zip bcmath \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /var/www/html
 COPY . .
@@ -21,6 +21,7 @@ COPY --from=assets /app/public/build ./public/build
 RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
     && php -r "require 'vendor/autoload.php';" \
+    && sed -i 's/\r$//' docker/entrypoint.sh \
     && chmod +x docker/entrypoint.sh
 EXPOSE 8000
 ENTRYPOINT ["docker/entrypoint.sh"]
