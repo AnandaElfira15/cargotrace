@@ -31,6 +31,7 @@ class StoreShipmentRequest extends FormRequest
             'shipment_number' => ['nullable', 'string', 'max:30', 'unique:shipments,shipment_number'],
             'customer_id' => ['required', 'integer', Rule::exists('users', 'id')->where('role', UserRole::Customer->value)],
             'carrier_id' => ['required', 'integer', Rule::exists('carriers', 'id')->where('is_active', true)],
+            'trade_lane_id' => ['nullable', 'integer', Rule::exists('trade_lanes', 'id')->where('is_active', true)],
             'origin_location_id' => ['required', 'integer', 'exists:locations,id'],
             'destination_location_id' => ['required', 'integer', 'exists:locations,id', 'different:origin_location_id'],
             'cargo_type' => ['required', 'string', 'max:100'],

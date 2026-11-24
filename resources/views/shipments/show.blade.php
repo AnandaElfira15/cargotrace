@@ -14,6 +14,9 @@
         <div>
             <div class="flex flex-wrap items-center gap-2">
                 <x-status-badge :status="$shipment->status" class="text-sm" />
+                @if ($shipment->tradeLane)
+                    <span class="inline-flex items-center gap-1 rounded-full bg-navy-800 px-2.5 py-0.5 text-xs font-semibold text-white" title="{{ $shipment->tradeLane->route }}">{{ $shipment->tradeLane->name }}</span>
+                @endif
                 @if ($delay->isDelayed) <x-severity-badge :severity="$delay->severity" /> <span class="text-sm font-semibold text-red-700">Delayed {{ number_format($delay->delayHours, 1) }} h</span>
                 @else <span class="text-sm font-semibold text-emerald-700">On time</span> @endif
             </div>
@@ -35,7 +38,8 @@
         {{-- Map + details --}}
         <div class="space-y-4 lg:col-span-2">
             <div class="card p-0 overflow-hidden">
-                <div id="map" class="h-96 w-full"></div>
+                <div id="map" class="w-full" style="height:24rem;"></div>
+                <p id="mapNote" style="display:none;" class="px-4 py-2 text-xs text-red-700"></p>
                 <div class="flex flex-wrap gap-4 border-t border-navy-100 px-4 py-2 text-xs text-navy-600">
                     <span><span class="mr-1 inline-block h-3 w-3 rounded-full bg-navy-900 align-middle"></span>Origin</span>
                     <span><span class="mr-1 inline-block h-3 w-3 rounded-full border-2 border-navy-900 bg-white align-middle"></span>Destination</span>
@@ -49,6 +53,7 @@
                 <h2 class="mb-3 text-sm font-bold">Shipment details</h2>
                 <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                     @foreach ([
+                        'Trade lane' => $shipment->tradeLane ? $shipment->tradeLane->name.' · '.$shipment->tradeLane->route : 'None (global thresholds)',
                         'Weight' => number_format($shipment->weight_kg, 2).' kg',
                         'Volume' => number_format($shipment->volume_cbm, 2).' cbm',
                         'Expected departure' => $shipment->expected_departure_at->format('Y-m-d H:i'),
@@ -158,7 +163,7 @@
                     <div>
                         <label class="label">Type</label>
                         <select class="input" name="type" required>
-                            @foreach ($exceptionTypes as $t) <option value="{{ $t->value }}" @selected($t->value === config('cargotrace.group.primary_exception'))>{{ $t->label() }}</option> @endforeach
+                            @foreach ($exceptionTypes as $t) <option value="{{ $t->value }}" @selected($t->value === ($shipment->tradeLane?->primary_exception?->value ?? config('cargotrace.group.primary_exception')))>{{ $t->label() }}</option> @endforeach
                         </select>
                     </div>
                     <div>
@@ -236,27 +241,43 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script>
         const data = @json($mapData);
-        const map = L.map('map', { scrollWheelZoom: false });
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        const bounds = [];
-        const dot = (ll, opts, popup) => { bounds.push(ll); return L.circleMarker(ll, opts).addTo(map).bindPopup(popup); };
+        const mapNote = document.getElementById('mapNote');
+        const showMapNote = msg => { mapNote.textContent = msg; mapNote.style.display = 'block'; };
         const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-        const line = data.points.map(p => [p.lat, p.lng]);
-        if (line.length > 1) L.polyline(line, { color: '#3b58a8', weight: 3, dashArray: '6 6' }).addTo(map);
+        if (typeof L === 'undefined') {
+            showMapNote('The map library could not be loaded. Check your internet connection and reload the page.');
+        } else {
+            const map = L.map('map', { scrollWheelZoom: false });
+            const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
 
-        dot([data.origin.lat, data.origin.lng], { radius: 9, color: '#0f1b3f', fillColor: '#0f1b3f', fillOpacity: 1 }, '<b>Origin</b><br>' + esc(data.origin.name));
-        dot([data.destination.lat, data.destination.lng], { radius: 9, color: '#0f1b3f', weight: 3, fillColor: '#ffffff', fillOpacity: 1 }, '<b>Destination</b><br>' + esc(data.destination.name));
-        data.points.forEach(p => dot([p.lat, p.lng],
-            { radius: 6, color: '#fff', weight: 1, fillColor: p.exception ? '#dc2626' : '#5a77c2', fillOpacity: 1 },
-            '<b>' + esc(p.label.replace('_', ' ')) + '</b><br>' + esc(p.time) + (p.place ? '<br>' + esc(p.place) : '')));
-        if (data.current) dot([data.current.lat, data.current.lng], { radius: 10, color: '#fff', weight: 2, fillColor: '#10b981', fillOpacity: 1 }, '<b>Current location</b>');
+            let tileErrors = 0;
+            tiles.on('tileerror', () => {
+                if (++tileErrors === 3) showMapNote('Map tiles could not be loaded (network or tile server issue). Markers and the route are still shown.');
+            });
 
-        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
+            const bounds = [];
+            const dot = (ll, opts, popup) => { bounds.push(ll); return L.circleMarker(ll, opts).addTo(map).bindPopup(popup); };
+
+            const line = data.points.map(p => [p.lat, p.lng]);
+            if (line.length > 1) L.polyline(line, { color: '#3b58a8', weight: 3, dashArray: '6 6' }).addTo(map);
+
+            dot([data.origin.lat, data.origin.lng], { radius: 9, color: '#0f1b3f', fillColor: '#0f1b3f', fillOpacity: 1 }, '<b>Origin</b><br>' + esc(data.origin.name));
+            dot([data.destination.lat, data.destination.lng], { radius: 9, color: '#0f1b3f', weight: 3, fillColor: '#ffffff', fillOpacity: 1 }, '<b>Destination</b><br>' + esc(data.destination.name));
+            data.points.forEach(p => dot([p.lat, p.lng],
+                { radius: 6, color: '#fff', weight: 1, fillColor: p.exception ? '#dc2626' : '#5a77c2', fillOpacity: 1 },
+                '<b>' + esc(p.label.replace('_', ' ')) + '</b><br>' + esc(p.time) + (p.place ? '<br>' + esc(p.place) : '')));
+            if (data.current) dot([data.current.lat, data.current.lng], { radius: 10, color: '#fff', weight: 2, fillColor: '#10b981', fillOpacity: 1 }, '<b>Current location</b>');
+
+            // The page layout (Tailwind CDN build) can settle after this script runs, so re-measure the map box.
+            const refit = () => { map.invalidateSize(); map.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 }); };
+            refit();
+            window.addEventListener('load', refit);
+            setTimeout(refit, 500);
+        }
 
         // Tracking form: status only matters for STATUS_UPDATE
         const typeSel = document.getElementById('event_type');

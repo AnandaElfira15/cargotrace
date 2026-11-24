@@ -70,7 +70,7 @@ class ShipmentService
                 $shipment
             );
 
-            return $shipment->load(['customer', 'carrier', 'origin', 'destination', 'items']);
+            return $shipment->load(['customer', 'carrier', 'tradeLane', 'origin', 'destination', 'items']);
         });
     }
 
@@ -93,7 +93,8 @@ class ShipmentService
                 }
             }
 
-            // Expected/estimated arrival may have changed, so re-run the delay rules.
+            // Expected/estimated arrival or the trade lane may have changed, so re-run the delay rules.
+            $shipment->unsetRelation('tradeLane');
             $this->eta->evaluate($shipment);
 
             if ($dirty || $hasItems) {
@@ -106,7 +107,7 @@ class ShipmentService
                 );
             }
 
-            return $shipment->load(['customer', 'carrier', 'origin', 'destination', 'items']);
+            return $shipment->load(['customer', 'carrier', 'tradeLane', 'origin', 'destination', 'items']);
         });
     }
 

@@ -20,6 +20,7 @@ class ShipmentFilterRequest extends FormRequest
             'q' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', Rule::in(ShipmentStatus::values())],
             'carrier_id' => ['nullable', 'integer'],
+            'trade_lane_id' => ['nullable', 'integer'],
             'origin_id' => ['nullable', 'integer'],
             'destination_id' => ['nullable', 'integer'],
             'date_from' => ['nullable', 'date'],

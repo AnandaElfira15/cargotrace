@@ -40,7 +40,9 @@ class LocationController extends Controller
     {
         $old = $location->only(['name', 'code', 'latitude', 'longitude']);
         $location->update($request->validated());
-        $audit->log('location.updated', $location, $old, $location->only(['name', 'code', 'latitude', 'longitude']), $request->user());
+        if ($location->wasChanged()) {
+            $audit->log('location.updated', $location, $old, $location->only(['name', 'code', 'latitude', 'longitude']), $request->user());
+        }
 
         return redirect()->route('locations.index')->with('status', 'Location updated.');
     }

@@ -11,8 +11,9 @@
 
 return [
     'group' => [
-        'name' => env('GROUP_NAME', 'Group A'),
-        'route' => env('GROUP_ROUTE', 'Southeast Asia to Europe'),
+        'name' => env('GROUP_NAME', 'Groups A, B & C'),
+        'route' => env('GROUP_ROUTE', 'SE Asia → Europe · Asia → N. America · SE Asia → Australia'),
+        // Fallbacks only: every trade lane (Group A/B/C) stores its own KPI and main exception.
         // on_time_delivery_rate | average_delay_duration | exception_resolution_time
         'kpi' => env('GROUP_KPI', 'on_time_delivery_rate'),
         'primary_exception' => env('GROUP_PRIMARY_EXCEPTION', 'CUSTOMS_HOLD'),
@@ -25,6 +26,11 @@ return [
         // delay > medium_max_hours              => HIGH
         'low_max_hours' => (float) env('DELAY_LOW_MAX_HOURS', 6),
         'medium_max_hours' => (float) env('DELAY_MEDIUM_MAX_HOURS', 24),
+    ],
+
+    'notifications' => [
+        // In-app notifications are always on. E-mail is optional (NOTIFY_BY_EMAIL=true) and needs a working MAIL_* setup.
+        'email' => (bool) env('NOTIFY_BY_EMAIL', false),
     ],
 
     'tracking' => [

@@ -14,6 +14,22 @@
 @endphp
 
 @section('content')
+    <form method="GET" action="{{ route('dashboard') }}" class="mb-4 flex flex-wrap items-end gap-3">
+        <div>
+            <label class="label" for="lane">Trade lane</label>
+            <select class="input" id="lane" name="lane" onchange="this.form.submit()">
+                <option value="">All lanes (A + B + C)</option>
+                @foreach ($lanes as $lane)
+                    <option value="{{ $lane->id }}" @selected((int) $laneId === $lane->id)>{{ $lane->name }} · {{ $lane->route }}</option>
+                @endforeach
+            </select>
+        </div>
+        @if ($laneId)
+            <a class="btn btn-outline" href="{{ route('dashboard') }}">Show all lanes</a>
+        @endif
+        <noscript><button class="btn btn-primary" type="submit">Apply</button></noscript>
+    </form>
+
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         @foreach ([
             ['Total shipments', $t['shipments']],
@@ -40,6 +56,45 @@
             </div>
         @endforeach
     </div>
+
+    @if (count($metrics['lanes']) > 0)
+        @php $fmt = fn ($v, $unit) => $v === null ? 'n/a' : $v.$unit; @endphp
+        <div class="card mt-4 overflow-x-auto p-0">
+            <div class="px-5 pt-5">
+                <h2 class="text-sm font-bold text-navy-900">Trade lane performance (Groups A, B and C)</h2>
+                <p class="mt-1 text-xs text-navy-500">Each lane has its own delay threshold, main exception type and highlighted KPI. Click a row to filter the dashboard.</p>
+            </div>
+            <table class="tbl mt-3">
+                <thead>
+                <tr>
+                    <th>Lane</th><th>Delay threshold</th><th>Main exception</th><th>On-time rate</th><th>Avg delay</th><th>Resolution time</th><th>Shipments</th><th>Delayed</th><th>Open exc.</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach ($metrics['lanes'] as $l)
+                    @php $hl = fn ($key) => $l['kpi'] === $key ? 'bg-navy-50 font-bold text-navy-900' : ''; @endphp
+                    <tr class="{{ (int) $laneId === $l['id'] ? 'bg-navy-50' : '' }}">
+                        <td>
+                            <a href="{{ route('dashboard', ['lane' => $l['id']]) }}" class="font-semibold">
+                                <span class="mr-1 inline-flex h-6 w-6 items-center justify-center rounded bg-navy-800 text-xs font-bold text-white">{{ $l['code'] }}</span>{{ $l['name'] }}
+                            </a>
+                            <p class="text-xs text-navy-500">{{ $l['route'] }}</p>
+                        </td>
+                        <td class="whitespace-nowrap">{{ $l['threshold_hours'] }} h <span class="text-xs text-navy-400">(LOW ≤ {{ $l['low_hours'] }} h)</span></td>
+                        <td>{{ $l['primary_exception_label'] }} <span class="text-xs text-navy-400">({{ $l['primary_exception_count'] }})</span></td>
+                        <td class="{{ $hl('on_time_delivery_rate') }}">{{ $fmt($l['kpis']['on_time_delivery_rate'], '%') }}</td>
+                        <td class="{{ $hl('average_delay_duration') }}">{{ $fmt($l['kpis']['average_delay_duration'], ' h') }}</td>
+                        <td class="{{ $hl('exception_resolution_time') }}">{{ $fmt($l['kpis']['exception_resolution_time'], ' h') }}</td>
+                        <td>{{ $l['shipments'] }}</td>
+                        <td>{{ $l['delayed'] }}</td>
+                        <td>{{ $l['open_exceptions'] }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+            <p class="px-5 py-3 text-xs text-navy-500">Highlighted cell = the KPI chosen for that group.</p>
+        </div>
+    @endif
 
     <div class="mt-4 grid gap-4 lg:grid-cols-3">
         <div class="card">
@@ -100,7 +155,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script>
         // Vanilla JS + Fetch API: charts are fed by /dashboard/data (live database numbers)
-        fetch(@json(route('dashboard.data')), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+        fetch(@json(route('dashboard.data', array_filter(['lane' => $laneId]))), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
             .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
             .then(data => {
                 const navy = ['#0f1b3f', '#223470', '#3b58a8', '#5a77c2', '#869fd9', '#b3c5eb'];

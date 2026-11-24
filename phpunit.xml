@@ -28,6 +28,7 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="GROUP_SCENARIO" value="all"/>
         <env name="DELAY_LOW_MAX_HOURS" value="6"/>
         <env name="DELAY_MEDIUM_MAX_HOURS" value="24"/>
     </php>

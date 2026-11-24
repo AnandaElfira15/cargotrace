@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\Severity;
 use App\Enums\ShipmentStatus;
 use App\Models\Shipment;
+use App\Models\TradeLane;
 use Carbon\CarbonInterface;
 
 /**
@@ -21,19 +22,30 @@ class EtaService
         private readonly NotificationService $notifications,
     ) {}
 
-    /** @return array{low_max: float, medium_max: float} */
-    public function thresholds(): array
+    /**
+     * Thresholds in hours. A trade lane (Group A/B/C) may define its own values;
+     * missing values fall back to the global setting (Settings page / .env).
+     *
+     * @return array{low_max: float, medium_max: float}
+     */
+    public function thresholds(?TradeLane $lane = null): array
     {
-        return [
-            'low_max' => (float) $this->settings->get('delay.low_max_hours', config('cargotrace.delay.low_max_hours')),
-            'medium_max' => (float) $this->settings->get('delay.medium_max_hours', config('cargotrace.delay.medium_max_hours')),
-        ];
+        $low = $lane?->delay_low_max_hours
+            ?? $this->settings->get('delay.low_max_hours', config('cargotrace.delay.low_max_hours'));
+        $medium = $lane?->delay_medium_max_hours
+            ?? $this->settings->get('delay.medium_max_hours', config('cargotrace.delay.medium_max_hours'));
+
+        return ['low_max' => (float) $low, 'medium_max' => (float) $medium];
     }
 
-    public function classify(float $delayHours): Severity
+    public function classify(float $delayHours, ?TradeLane $lane = null): Severity
     {
-        $t = $this->thresholds();
+        return $this->severityFor($delayHours, $this->thresholds($lane));
+    }
 
+    /** @param array{low_max: float, medium_max: float} $t */
+    private function severityFor(float $delayHours, array $t): Severity
+    {
         return match (true) {
             $delayHours <= $t['low_max'] => Severity::Low,
             $delayHours <= $t['medium_max'] => Severity::Medium,
@@ -45,7 +57,8 @@ class EtaService
     public function calculate(Shipment $shipment, ?CarbonInterface $now = null): DelayResult
     {
         $now ??= now();
-        $t = $this->thresholds();
+        $lane = $shipment->tradeLane;
+        $t = $this->thresholds($lane);
         $expected = $shipment->expected_arrival_at;
 
         if ($shipment->actual_arrival_at) {
@@ -68,12 +81,13 @@ class EtaService
         return new DelayResult(
             isDelayed: $isDelayed,
             delayHours: $hours,
-            severity: $isDelayed ? $this->classify($hours) : null,
+            severity: $isDelayed ? $this->severityFor($hours, $t) : null,
             expectedArrival: $expected,
             effectiveArrival: $effective,
             basis: $basis,
             lowMaxHours: $t['low_max'],
             mediumMaxHours: $t['medium_max'],
+            ruleSource: $lane ? $lane->name.' lane' : 'global thresholds',
         );
     }
 

@@ -15,7 +15,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-change-me-locally}
       SESSION_DRIVER: file
       CACHE_STORE: file
-      GROUP_SCENARIO: ${GROUP_SCENARIO:-a}
+      GROUP_SCENARIO: ${GROUP_SCENARIO:-all}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-password}
     depends_on:
       db:

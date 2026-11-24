@@ -17,12 +17,14 @@ final class DelayResult
         public readonly string $basis,
         public readonly float $lowMaxHours,
         public readonly float $mediumMaxHours,
+        public readonly ?string $ruleSource = null,
     ) {}
 
     public function explanation(): string
     {
         $rules = sprintf(
-            'Rules: up to %s h = LOW, above %s h up to %s h = MEDIUM, above %s h = HIGH.',
+            'Rules (%s): up to %s h = LOW, above %s h up to %s h = MEDIUM, above %s h = HIGH.',
+            $this->ruleSource ?? 'global thresholds',
             $this->fmt($this->lowMaxHours), $this->fmt($this->lowMaxHours), $this->fmt($this->mediumMaxHours), $this->fmt($this->mediumMaxHours)
         );
 

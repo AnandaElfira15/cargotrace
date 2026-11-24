@@ -9,6 +9,17 @@
 return [
     'name' => 'Group C: Southeast Asia to Australia',
 
+    'lane' => [
+        'code' => 'C',
+        'name' => 'Group C',
+        'route' => 'Southeast Asia → Australia',
+        'delay_low_max_hours' => 12,
+        'delay_medium_max_hours' => 24,
+        'primary_exception' => 'DOCUMENTATION_ISSUE',
+        'secondary_exception' => 'CUSTOMS_HOLD',
+        'kpi' => 'exception_resolution_time',
+    ],
+
     'carriers' => [
         ['name' => 'Coral Sea Container Line', 'code' => 'CSC', 'mode' => 'sea', 'contact_email' => 'ops@csc.example'],
         ['name' => 'Arafura Maritime', 'code' => 'ARM', 'mode' => 'sea', 'contact_email' => 'ops@arm.example'],

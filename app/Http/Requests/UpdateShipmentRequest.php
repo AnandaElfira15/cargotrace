@@ -33,6 +33,7 @@ class UpdateShipmentRequest extends FormRequest
             'shipment_number' => ['sometimes', 'string', 'max:30', Rule::unique('shipments', 'shipment_number')->ignore($shipment?->id)],
             'customer_id' => ['sometimes', 'integer', Rule::exists('users', 'id')->where('role', UserRole::Customer->value)],
             'carrier_id' => ['sometimes', 'integer', 'exists:carriers,id'],
+            'trade_lane_id' => ['sometimes', 'nullable', 'integer', 'exists:trade_lanes,id'],
             'origin_location_id' => ['sometimes', 'integer', 'exists:locations,id'],
             'destination_location_id' => ['sometimes', 'integer', 'exists:locations,id'],
             'cargo_type' => ['sometimes', 'string', 'max:100'],

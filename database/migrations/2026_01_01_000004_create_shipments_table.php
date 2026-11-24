@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('shipment_number', 30)->unique();
             $table->foreignId('customer_id')->constrained('users');
             $table->foreignId('carrier_id')->constrained('carriers');
+            $table->foreignId('trade_lane_id')->nullable()->constrained('trade_lanes')->nullOnDelete();
             $table->foreignId('origin_location_id')->constrained('locations');
             $table->foreignId('destination_location_id')->constrained('locations');
             $table->string('cargo_type', 100);

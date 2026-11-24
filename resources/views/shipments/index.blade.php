@@ -35,6 +35,15 @@
             </select>
         </div>
         <div>
+            <label class="label" for="trade_lane_id">Trade lane</label>
+            <select class="input" id="trade_lane_id" name="trade_lane_id">
+                <option value="">All</option>
+                @foreach ($lanes as $l)
+                    <option value="{{ $l->id }}" @selected((string) ($filters['trade_lane_id'] ?? '') === (string) $l->id)>{{ $l->name }} · {{ $l->route }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
             <label class="label" for="origin_id">Origin</label>
             <select class="input" id="origin_id" name="origin_id">
                 <option value="">All</option>
@@ -88,13 +97,20 @@
         <table class="tbl">
             <thead>
             <tr>
-                <th>Shipment</th><th>Route</th><th>Customer</th><th>Carrier</th><th>Status</th><th>Expected arrival</th><th>Delay</th>
+                <th>Shipment</th><th>Lane</th><th>Route</th><th>Customer</th><th>Carrier</th><th>Status</th><th>Expected arrival</th><th>Delay</th>
             </tr>
             </thead>
             <tbody>
             @forelse ($shipments as $s)
                 <tr>
                     <td><a class="font-semibold" href="{{ route('shipments.show', $s) }}">{{ $s->shipment_number }}</a><p class="text-xs text-navy-500">{{ $s->cargo_type }}</p></td>
+                    <td>
+                        @if ($s->tradeLane)
+                            <span title="{{ $s->tradeLane->route }}" class="inline-flex h-6 w-6 items-center justify-center rounded bg-navy-800 text-xs font-bold text-white">{{ $s->tradeLane->code }}</span>
+                        @else
+                            <span class="text-navy-300">–</span>
+                        @endif
+                    </td>
                     <td>{{ $s->origin->name }}<span class="text-navy-400"> → </span>{{ $s->destination->name }}</td>
                     <td>{{ $s->customer->name }}</td>
                     <td>{{ $s->carrier->name }}</td>
@@ -109,7 +125,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="py-10 text-center text-navy-500">No shipments match your filters.</td></tr>
+                <tr><td colspan="8" class="py-10 text-center text-navy-500">No shipments match your filters.</td></tr>
             @endforelse
             </tbody>
         </table>

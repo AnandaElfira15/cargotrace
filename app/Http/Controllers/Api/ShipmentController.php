@@ -25,7 +25,7 @@ class ShipmentController extends Controller
         $filters = $request->validated();
 
         $paginator = Shipment::query()
-            ->with(['customer', 'carrier', 'origin', 'destination'])
+            ->with(['customer', 'carrier', 'tradeLane', 'origin', 'destination'])
             ->visibleTo($request->user())
             ->filter($filters)
             ->paginate((int) ($filters['per_page'] ?? 15))
@@ -47,7 +47,7 @@ class ShipmentController extends Controller
     {
         Gate::authorize('view', $shipment);
 
-        return new ShipmentResource($shipment->load(['customer', 'carrier', 'origin', 'destination', 'items']));
+        return new ShipmentResource($shipment->load(['customer', 'carrier', 'tradeLane', 'origin', 'destination', 'items']));
     }
 
     public function update(UpdateShipmentRequest $request, Shipment $shipment): ShipmentResource

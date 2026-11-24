@@ -46,6 +46,16 @@
                 </select>
             </div>
             <div>
+                <label class="label">Trade lane (group scenario)</label>
+                <select class="input" name="trade_lane_id">
+                    <option value="">None: use global thresholds</option>
+                    @foreach ($lanes as $l)
+                        <option value="{{ $l->id }}" @selected((string) $val('trade_lane_id') === (string) $l->id)>{{ $l->name }} · {{ $l->route }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-xs text-navy-500">The lane decides the delay thresholds and the default exception type.</p>
+            </div>
+            <div>
                 <label class="label">Cargo type</label>
                 <input class="input" name="cargo_type" value="{{ $val('cargo_type') }}" placeholder="e.g. Palm oil derivatives" required>
             </div>

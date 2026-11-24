@@ -39,7 +39,9 @@ class CarrierController extends Controller
     {
         $old = $carrier->only(['name', 'code', 'mode', 'is_active']);
         $carrier->update($request->validated());
-        $audit->log('carrier.updated', $carrier, $old, $carrier->only(['name', 'code', 'mode', 'is_active']), $request->user());
+        if ($carrier->wasChanged()) {
+            $audit->log('carrier.updated', $carrier, $old, $carrier->only(['name', 'code', 'mode', 'is_active']), $request->user());
+        }
 
         return redirect()->route('carriers.index')->with('status', 'Carrier updated.');
     }

@@ -9,6 +9,17 @@
 return [
     'name' => 'Group B: Asia to North America',
 
+    'lane' => [
+        'code' => 'B',
+        'name' => 'Group B',
+        'route' => 'Asia → North America',
+        'delay_low_max_hours' => 9,
+        'delay_medium_max_hours' => 18,
+        'primary_exception' => 'WEATHER_DELAY',
+        'secondary_exception' => 'PORT_CONGESTION',
+        'kpi' => 'average_delay_duration',
+    ],
+
     'carriers' => [
         ['name' => 'Pacific Crest Lines', 'code' => 'PCL', 'mode' => 'sea', 'contact_email' => 'ops@pcl.example'],
         ['name' => 'Transpacific Marine', 'code' => 'TPM', 'mode' => 'sea', 'contact_email' => 'ops@tpm.example'],

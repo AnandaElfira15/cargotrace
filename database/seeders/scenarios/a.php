@@ -13,6 +13,17 @@
 return [
     'name' => 'Group A: Southeast Asia to Europe',
 
+    'lane' => [
+        'code' => 'A',
+        'name' => 'Group A',
+        'route' => 'Southeast Asia → Europe',
+        'delay_low_max_hours' => 6,
+        'delay_medium_max_hours' => 12,
+        'primary_exception' => 'CUSTOMS_HOLD',
+        'secondary_exception' => 'PORT_CONGESTION',
+        'kpi' => 'on_time_delivery_rate',
+    ],
+
     'carriers' => [
         ['name' => 'Pacific Meridian Lines', 'code' => 'PML', 'mode' => 'sea', 'contact_email' => 'ops@pml.example'],
         ['name' => 'Nusantara Ocean Freight', 'code' => 'NOF', 'mode' => 'sea', 'contact_email' => 'ops@nof.example'],

@@ -1,0 +1,40 @@
+# Render.com blueprint (starter). Create via: New + > Blueprint > select this repository.
+# Free-tier limits change over time (idle sleep, database expiry): check Render's current terms.
+services:
+  - type: web
+    name: cargotrace
+    runtime: docker
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_NAME
+        value: CargoTrace
+      - key: APP_TIMEZONE
+        value: Asia/Jakarta
+      - key: SESSION_DRIVER
+        value: file
+      - key: CACHE_STORE
+        value: file
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromDatabase:
+          name: cargotrace-db
+          property: connectionString
+      - key: GROUP_SCENARIO
+        value: all
+      - key: DEMO_PASSWORD
+        value: demo-password-change-me
+      - key: APP_KEY
+        sync: false   # paste the output of `php artisan key:generate --show` (run locally)
+      - key: APP_URL
+        sync: false   # e.g. https://cargotrace.onrender.com
+
+databases:
+  - name: cargotrace-db
+    plan: free
+    databaseName: cargotrace

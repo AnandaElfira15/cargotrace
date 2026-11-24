@@ -50,7 +50,9 @@ class TrackingService
             }
 
             $latest = $shipment->trackingEvents()->orderByDesc('occurred_at')->orderByDesc('id')->first();
-            if ($latest && $occurredAt->lessThan($latest->occurred_at)) {
+            // The HTML datetime-local input has minute precision, so compare against the start of the
+            // latest event's minute. Otherwise an event added within the same minute would be rejected.
+            if ($latest && $occurredAt->lessThan($latest->occurred_at->copy()->startOfMinute())) {
                 throw ValidationException::withMessages([
                     'occurred_at' => ['The event time cannot be earlier than the latest recorded event ('.$latest->occurred_at->format('Y-m-d H:i').').'],
                 ]);

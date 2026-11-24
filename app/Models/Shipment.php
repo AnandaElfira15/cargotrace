@@ -22,7 +22,7 @@ class Shipment extends Model
      * and created_by are system managed by the service layer.
      */
     protected $fillable = [
-        'shipment_number', 'customer_id', 'carrier_id', 'origin_location_id', 'destination_location_id',
+        'shipment_number', 'customer_id', 'carrier_id', 'trade_lane_id', 'origin_location_id', 'destination_location_id',
         'cargo_type', 'weight_kg', 'volume_cbm',
         'expected_departure_at', 'expected_arrival_at', 'estimated_arrival_at',
     ];
@@ -58,6 +58,11 @@ class Shipment extends Model
     public function carrier(): BelongsTo
     {
         return $this->belongsTo(Carrier::class);
+    }
+
+    public function tradeLane(): BelongsTo
+    {
+        return $this->belongsTo(TradeLane::class);
     }
 
     public function origin(): BelongsTo
@@ -104,6 +109,7 @@ class Shipment extends Model
             ->when(filled($f['q'] ?? null), fn (Builder $q) => $q->where('shipments.shipment_number', 'like', '%'.trim($f['q']).'%'))
             ->when(filled($f['status'] ?? null), fn (Builder $q) => $q->where('shipments.status', $f['status']))
             ->when(filled($f['carrier_id'] ?? null), fn (Builder $q) => $q->where('shipments.carrier_id', $f['carrier_id']))
+            ->when(filled($f['trade_lane_id'] ?? null), fn (Builder $q) => $q->where('shipments.trade_lane_id', $f['trade_lane_id']))
             ->when(filled($f['origin_id'] ?? null), fn (Builder $q) => $q->where('shipments.origin_location_id', $f['origin_id']))
             ->when(filled($f['destination_id'] ?? null), fn (Builder $q) => $q->where('shipments.destination_location_id', $f['destination_id']))
             ->when(filled($f['date_from'] ?? null), fn (Builder $q) => $q->where('shipments.expected_departure_at', '>=', Carbon::parse($f['date_from'])->startOfDay()))

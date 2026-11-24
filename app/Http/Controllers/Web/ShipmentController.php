@@ -14,6 +14,7 @@ use App\Http\Requests\UpdateShipmentRequest;
 use App\Models\Carrier;
 use App\Models\Location;
 use App\Models\Shipment;
+use App\Models\TradeLane;
 use App\Models\User;
 use App\Services\EtaService;
 use App\Services\ShipmentService;
@@ -33,7 +34,7 @@ class ShipmentController extends Controller
         $filters = $request->validated();
 
         $shipments = Shipment::query()
-            ->with(['customer', 'carrier', 'origin', 'destination'])
+            ->with(['customer', 'carrier', 'tradeLane', 'origin', 'destination'])
             ->visibleTo($request->user())
             ->filter($filters)
             ->paginate((int) ($filters['per_page'] ?? 15))
@@ -43,6 +44,7 @@ class ShipmentController extends Controller
             'shipments' => $shipments,
             'filters' => $filters,
             'carriers' => Carrier::query()->orderBy('name')->get(),
+            'lanes' => TradeLane::query()->orderBy('code')->get(),
             'locations' => Location::query()->orderBy('name')->get(),
             'statuses' => ShipmentStatus::cases(),
         ]);
@@ -68,7 +70,7 @@ class ShipmentController extends Controller
     {
         Gate::authorize('view', $shipment);
 
-        $shipment->load(['customer', 'carrier', 'origin', 'destination', 'items', 'exceptions.reporter']);
+        $shipment->load(['customer', 'carrier', 'tradeLane', 'origin', 'destination', 'items', 'exceptions.reporter']);
 
         $timeline = $tracking->timeline($shipment);
         $current = $tracking->currentLocation($shipment);
@@ -132,6 +134,7 @@ class ShipmentController extends Controller
             'shipment' => $shipment,
             'customers' => User::query()->where('role', UserRole::Customer->value)->where('is_active', true)->orderBy('name')->get(),
             'carriers' => Carrier::query()->where('is_active', true)->orderBy('name')->get(),
+            'lanes' => TradeLane::query()->where('is_active', true)->orderBy('code')->get(),
             'locations' => Location::query()->orderBy('name')->get(),
         ];
     }

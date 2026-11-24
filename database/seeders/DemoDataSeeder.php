@@ -9,6 +9,7 @@ use App\Enums\UserRole;
 use App\Models\Carrier;
 use App\Models\Location;
 use App\Models\Shipment;
+use App\Models\TradeLane;
 use App\Models\User;
 use App\Services\ExceptionService;
 use App\Services\ShipmentService;
@@ -17,20 +18,27 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
 /**
- * Deterministic, synthetic demo data driven by database/seeders/scenarios/{a,b,c}.php (GROUP_SCENARIO).
- * Everything goes through the real services, so business rules, audit logs,
- * notifications and delay flags are produced exactly as in production use.
+ * Deterministic, synthetic demo data for ALL group scenarios (A, B and C) in one database.
+ * Each scenario file in database/seeders/scenarios/ defines a trade lane (route, delay thresholds,
+ * main exception, KPI) plus its carriers, locations, routes and cargo types.
+ *
+ * GROUP_SCENARIO=all (default) seeds A, B and C; GROUP_SCENARIO=a|b|c seeds a single lane.
+ * Everything goes through the real services, so business rules, audit logs, notifications
+ * and delay flags are produced exactly as in production use.
  */
 class DemoDataSeeder extends Seeder
 {
+    /** Order of lifecycle steps for the "target" status of a profile. */
+    private const ORDER = ['CREATED' => 0, 'BOOKED' => 1, 'PICKED_UP' => 2, 'IN_TRANSIT' => 3, 'DELIVERED' => 4];
+
     public function run(): void
     {
-        $key = strtolower((string) env('GROUP_SCENARIO', 'a'));
-        $file = database_path("seeders/scenarios/{$key}.php");
-        $scenario = require (file_exists($file) ? $file : database_path('seeders/scenarios/a.php'));
+        config(['cargotrace.notifications.email' => false]); // never send e-mails while seeding
+
         $password = env('DEMO_PASSWORD', 'password');
 
-        $admin = $this->user('Ayu Administrator', 'admin@cargotrace.test', UserRole::Admin, 'CargoTrace HQ', $password);
+        // Creation order matters: admin = id 1, operator = id 2, customers = ids 3, 4, 5 (docs and Postman rely on it).
+        $this->user('Ayu Administrator', 'admin@cargotrace.test', UserRole::Admin, 'CargoTrace HQ', $password);
         $operator = $this->user('Omar Operator', 'operator@cargotrace.test', UserRole::Operator, 'CargoTrace Operations', $password);
         $customers = [
             $this->user('Citra Customer', 'customer@cargotrace.test', UserRole::Customer, 'PT Nusantara Export', $password),
@@ -38,17 +46,39 @@ class DemoDataSeeder extends Seeder
             $this->user('Hana Schmidt', 'hana@hanseatic.test', UserRole::Customer, 'Hanseatic Imports GmbH', $password),
         ];
 
-        $carriers = [];
-        foreach ($scenario['carriers'] as $c) {
-            $carriers[] = Carrier::query()->updateOrCreate(['code' => $c['code']], $c + ['is_active' => true]);
-        }
+        $choice = strtolower((string) env('GROUP_SCENARIO', 'all'));
+        $keys = in_array($choice, ['a', 'b', 'c'], true) ? [$choice] : ['a', 'b', 'c'];
 
+        $lanes = [];
+        $carriers = [];
         $locations = [];
-        foreach ($scenario['locations'] as $l) {
-            $locations[$l['code']] = Location::query()->updateOrCreate(['code' => $l['code']], [
-                'name' => $l['name'], 'type' => $l['type'], 'city' => $l['city'], 'country' => $l['country'],
-                'latitude' => $l['lat'], 'longitude' => $l['lng'],
+        $scenarios = [];
+
+        foreach ($keys as $key) {
+            $scenario = require database_path("seeders/scenarios/{$key}.php");
+            $scenarios[$key] = $scenario;
+            $lane = $scenario['lane'];
+
+            $lanes[$key] = TradeLane::query()->updateOrCreate(['code' => $lane['code']], [
+                'name' => $lane['name'],
+                'route' => $lane['route'],
+                'delay_low_max_hours' => $lane['delay_low_max_hours'],
+                'delay_medium_max_hours' => $lane['delay_medium_max_hours'],
+                'primary_exception' => $lane['primary_exception'],
+                'kpi' => $lane['kpi'],
+                'is_active' => true,
             ]);
+
+            foreach ($scenario['carriers'] as $c) {
+                $carriers[$key][] = Carrier::query()->updateOrCreate(['code' => $c['code']], $c + ['is_active' => true]);
+            }
+
+            foreach ($scenario['locations'] as $l) {
+                $locations[$l['code']] = Location::query()->updateOrCreate(['code' => $l['code']], [
+                    'name' => $l['name'], 'type' => $l['type'], 'city' => $l['city'], 'country' => $l['country'],
+                    'latitude' => $l['lat'], 'longitude' => $l['lng'],
+                ]);
+            }
         }
 
         if (Shipment::query()->exists()) {
@@ -57,17 +87,33 @@ class DemoDataSeeder extends Seeder
             return;
         }
 
+        foreach ($keys as $key) {
+            $this->seedLane($scenarios[$key], $lanes[$key], $carriers[$key], $locations, $customers, $operator);
+        }
+
+        $this->command?->info('Demo data ready for lane(s): '.implode(', ', array_map('strtoupper', $keys)).'. Accounts: admin@cargotrace.test, operator@cargotrace.test, customer@cargotrace.test (password: '.$password.')');
+    }
+
+    /**
+     * @param array<string, mixed> $scenario
+     * @param array<int, Carrier> $carriers
+     * @param array<string, Location> $locations
+     * @param array<int, User> $customers
+     */
+    private function seedLane(array $scenario, TradeLane $lane, array $carriers, array $locations, array $customers, User $operator): void
+    {
         $shipments = app(ShipmentService::class);
         $tracking = app(TrackingService::class);
         $exceptions = app(ExceptionService::class);
-        $primary = ExceptionType::tryFrom((string) config('cargotrace.group.primary_exception')) ?? ExceptionType::CustomsHold;
+
+        $primary = $lane->primary_exception;
+        $second = ExceptionType::tryFrom((string) ($scenario['lane']['secondary_exception'] ?? '')) ?? ExceptionType::PortCongestion;
         $now = now();
 
         // target   = final lifecycle step
         // late     = hours late (delivery time, or the ETA for in-transit shipments)
         // extra    = (DELIVERED) extra days since arrival, so deliveries are spread over time
         // progress = (IN_TRANSIT) fraction of the voyage completed now; > 1 means overdue
-        $second = ExceptionType::tryFrom((string) config('cargotrace.group.secondary_exception')) ?? ExceptionType::PortCongestion;
         $profiles = [
             ['target' => 'DELIVERED', 'extra' => 30, 'late' => 0],
             ['target' => 'DELIVERED', 'extra' => 26, 'late' => 0],
@@ -93,12 +139,12 @@ class DemoDataSeeder extends Seeder
             ['target' => 'CANCELLED', 'age' => 6, 'late' => 0],
         ];
 
-        $order = ['CREATED' => 0, 'BOOKED' => 1, 'PICKED_UP' => 2, 'IN_TRANSIT' => 3, 'DELIVERED' => 4];
-
         foreach ($profiles as $i => $p) {
             $route = $scenario['routes'][$i % count($scenario['routes'])];
             $origin = $locations[$route['origin']];
             $destination = $locations[$route['destination']];
+            $cargo = $scenario['cargo_types'][$i % count($scenario['cargo_types'])];
+
             $age = match ($p['target']) {
                 'DELIVERED' => $route['transit_days'] + 3 + $p['extra'],
                 'IN_TRANSIT' => 1 + $p['progress'] * $route['transit_days'],
@@ -111,15 +157,16 @@ class DemoDataSeeder extends Seeder
             $shipment = $shipments->create([
                 'customer_id' => $customers[$i % count($customers)]->id,
                 'carrier_id' => $carriers[$i % count($carriers)]->id,
+                'trade_lane_id' => $lane->id,
                 'origin_location_id' => $origin->id,
                 'destination_location_id' => $destination->id,
-                'cargo_type' => $scenario['cargo_types'][$i % count($scenario['cargo_types'])],
+                'cargo_type' => $cargo,
                 'weight_kg' => 4000 + ($i * 750),
                 'volume_cbm' => 20 + ($i * 2),
                 'expected_departure_at' => $depart,
                 'expected_arrival_at' => $arrive,
                 'items' => [
-                    ['description' => $scenario['cargo_types'][$i % count($scenario['cargo_types'])].' (lot A)', 'quantity' => 10 + $i, 'weight_kg' => 2000 + ($i * 300), 'volume_cbm' => 10, 'hs_code' => '8517.12'],
+                    ['description' => $cargo.' (lot A)', 'quantity' => 10 + $i, 'weight_kg' => 2000 + ($i * 300), 'volume_cbm' => 10, 'hs_code' => '8517.12'],
                     ['description' => 'Packaging and pallets', 'quantity' => 40, 'weight_kg' => 500, 'volume_cbm' => 4, 'hs_code' => '4415.20'],
                 ],
             ], $operator, $created);
@@ -130,8 +177,8 @@ class DemoDataSeeder extends Seeder
                 continue;
             }
 
-            $step = $order[$p['target']];
-            $lastIso = null;
+            $step = self::ORDER[$p['target']];
+            $lastAt = null;
 
             $plan = [];
             if ($step >= 1) {
@@ -164,12 +211,12 @@ class DemoDataSeeder extends Seeder
                     $etaApplied = true;
                 }
                 $this->event($tracking, $shipment, $operator, $at, $kind, $locationId, $text, $eta);
-                $lastIso = $at;
+                $lastAt = $at;
             }
 
             if (isset($p['exception'])) {
                 [$type, $final] = $p['exception'];
-                $detected = ($lastIso ?? $created)->copy()->addHours(1);
+                $detected = ($lastAt ?? $created)->copy()->addHours(1);
                 if ($detected->greaterThan($now)) {
                     $detected = $now->copy()->subMinutes(30);
                 }
@@ -192,8 +239,6 @@ class DemoDataSeeder extends Seeder
                 }
             }
         }
-
-        $this->command?->info('Demo data ready. Accounts: admin@cargotrace.test, operator@cargotrace.test, customer@cargotrace.test (password: '.$password.')');
     }
 
     private function user(string $name, string $email, UserRole $role, string $company, string $password): User

@@ -15,6 +15,7 @@ class ShipmentResource extends JsonResource
             'status' => $this->status->value,
             'customer' => new UserResource($this->whenLoaded('customer')),
             'carrier' => new CarrierResource($this->whenLoaded('carrier')),
+            'trade_lane' => $this->whenLoaded('tradeLane', fn () => $this->tradeLane ? ['id' => $this->tradeLane->id, 'code' => $this->tradeLane->code, 'name' => $this->tradeLane->name, 'route' => $this->tradeLane->route] : null),
             'origin' => new LocationResource($this->whenLoaded('origin')),
             'destination' => new LocationResource($this->whenLoaded('destination')),
             'cargo_type' => $this->cargo_type,
