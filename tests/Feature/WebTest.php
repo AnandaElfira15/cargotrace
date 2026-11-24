@@ -16,10 +16,11 @@ class WebTest extends TestCase
 
     public function test_web_and_api_route_names_do_not_collide(): void
     {
-    $this->assertSame(url('/shipments/5'), route('shipments.show', 5));
-    $this->assertSame(url('/shipments'), route('shipments.index'));
-    $this->assertSame(url('/api/shipments/5'), route('api.shipments.show', 5));
+        $this->assertSame(url('/shipments/5'), route('shipments.show', 5));
+        $this->assertSame(url('/shipments'), route('shipments.index'));
+        $this->assertSame(url('/api/shipments/5'), route('api.shipments.show', 5));
     }
+
     public function test_guests_are_redirected_to_login(): void
     {
         $this->get('/dashboard')->assertRedirect('/login');
