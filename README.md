@@ -23,15 +23,26 @@ for the *Web Programming 2* final project (UAS).
 |------|--------------|
 | Shipment lifecycle | `CREATED → BOOKED → PICKED_UP → IN_TRANSIT → DELIVERED` (+ `CANCELLED` from CREATED/BOOKED). Every transition is validated on the backend; `DELIVERED` and `CANCELLED` are terminal. |
 | Tracking & timeline | Append-only tracking events with time, location and coordinates; chronological timeline; exception events highlighted; current location = newest event with a valid position. |
-| ETA & delay rules | Deterministic rules. Delayed when ETA > expected arrival. Severity by delay duration (thresholds configurable). The UI shows the rule and the values used. |
+| ETA & delay rules | Deterministic rules. Delayed when ETA > expected arrival. Severity by delay duration with thresholds per trade lane (Group A/B/C) or global. The UI shows the rule set and the values used. |
+| Trade lanes (Groups A, B, C) | One application serves all three group scenarios: per-lane route, delay threshold, main exception and KPI, with a comparison table on the dashboard. |
 | Exceptions | `CUSTOMS_HOLD`, `WEATHER_DELAY`, `PORT_CONGESTION`, `DAMAGED`, `MISROUTED`, `DOCUMENTATION_ISSUE`; severity; `OPEN → INVESTIGATING → RESOLVED`; detection and resolution times stored. |
 | Map | Leaflet + OpenStreetMap with origin, destination and tracking-point markers, popups and attribution. |
 | External APIs | Nominatim geocoding (locations form) and Open-Meteo weather (shipment page) via Laravel HTTP Client with timeout/error/empty handling. Weather is shown as context only, never as a delay prediction. |
 | Dashboard | Live database metrics: totals, in transit, delivered, delayed, open exceptions, by status, by carrier, delay and exception rate, plus the three group KPIs. Charts via Chart.js. |
 | Search & filter | Shipment number, status, carrier, origin, destination, date range, delay state, sorting and server-side pagination (web and API). |
-| Notifications & audit | In-app notifications; audit log with actor, action, time, entity and old/new values. |
+| Notifications & audit | In-app notifications (plus optional e-mail copies via `NOTIFY_BY_EMAIL=true`); audit log with actor, action, time, entity and old/new values. |
 | Roles | Administrator, Logistics Operator, Customer, enforced by middleware and policies on every route and endpoint. |
 | REST API | JSON, Sanctum tokens, validation, pagination, consistent errors, Postman collection. |
+
+## Screenshots
+
+Add your own screenshots to `docs/screenshots/` (see the list in that folder's README) and uncomment the block below.
+
+<!--
+![Dashboard](docs/screenshots/dashboard.png)
+![Shipment detail with map and timeline](docs/screenshots/shipment-detail.png)
+![Shipments list with filters](docs/screenshots/shipments-list.png)
+-->
 
 ## Roles
 
@@ -73,6 +84,12 @@ touch database/database.sqlite
 php artisan migrate --seed
 ```
 
+Check your setup at any time (PHP, key, database, demo data, thresholds, geocoding and weather services):
+
+```bash
+php artisan cargotrace:doctor
+```
+
 Optional scheduler (re-evaluates delays of in-flight shipments every hour):
 
 ```bash
@@ -80,18 +97,25 @@ php artisan schedule:work                 # development
 * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1   # production cron
 ```
 
-### Group scenario (unique per group)
+### Group scenarios A, B and C in one application
 
-Each group receives its own parameters. Everything is configuration, no code changes needed:
+The brief gives every group its own parameters. CargoTrace serves **all three at the same time** through *trade lanes*:
+each shipment belongs to a lane, and each lane carries its own route, delay threshold, main exception and KPI.
 
-| Setting | Where | Example (Group A) |
-|---------|-------|-------------------|
-| Delay threshold (hours) | `DELAY_MEDIUM_MAX_HOURS` in `.env` (or **Settings** page as admin) | `12` |
-| KPI highlighted on dashboard | `GROUP_KPI` | `on_time_delivery_rate` |
-| Main exception type | `GROUP_PRIMARY_EXCEPTION` | `CUSTOMS_HOLD` |
-| Demo data set (carriers, locations, routes) | `GROUP_SCENARIO` → `database/seeders/scenarios/{a,b,c}.php` | `a` |
+| Lane | Route | Delay threshold (MEDIUM up to / HIGH above) | Main exception | Highlighted KPI |
+|------|-------|---------------------------------------------|----------------|-----------------|
+| **A** | Southeast Asia → Europe | 12 h (LOW up to 6 h) | `CUSTOMS_HOLD` | on-time delivery rate |
+| **B** | Asia → North America | 18 h (LOW up to 9 h) | `WEATHER_DELAY` | average delay duration |
+| **C** | Southeast Asia → Australia | 24 h (LOW up to 12 h) | `DOCUMENTATION_ISSUE` | exception resolution time |
 
-To switch scenario: edit `.env`, then `php artisan migrate:fresh --seed`. Copy a scenario file to create your own variation.
+* The seeder creates all three lanes with 22 shipments each (`GROUP_SCENARIO=all`, the default; use `a`, `b` or `c` for a single lane).
+* The dashboard shows a **Trade lane performance** table (thresholds, main exception, the three KPIs, delayed shipments, open exceptions per lane), a lane filter, and highlights each group's own KPI.
+* The shipment list can be filtered by lane; the shipment form has a *Trade lane* field; the exception form preselects the lane's main exception.
+* Delay severity uses the shipment's lane thresholds. A shipment without a lane uses the global thresholds (`DELAY_*` in `.env` or the Settings page).
+* An administrator edits every lane (thresholds, main exception, KPI) on the **Settings** page; changes are audited.
+* Scenario data (carriers, locations, routes) lives in `database/seeders/scenarios/{a,b,c}.php`; copy one to create your own variation.
+
+After pulling this version run `php artisan migrate:fresh --seed` (the `shipments` table gained `trade_lane_id`).
 
 ## Delay rules
 
@@ -104,8 +128,8 @@ if the shipment is PICKED_UP/IN_TRANSIT and "now" is past the effective arrival,
 
 delayed  = effective arrival > expected arrival
 delay    = effective arrival − expected arrival (hours)
-severity = LOW     if delay ≤ low_max_hours      (default 6)
-           MEDIUM  if delay ≤ medium_max_hours   (default 24, group value e.g. 12)
+severity = LOW     if delay ≤ low_max_hours      (lane value, else global default 6)
+           MEDIUM  if delay ≤ medium_max_hours   (lane value 12 / 18 / 24, else global default 24)
            HIGH    otherwise
 ```
 
@@ -138,6 +162,7 @@ Base path `/api`, JSON in/out, Bearer token from `POST /api/login`.
 | GET/POST | `/api/shipments/{id}/tracking` | timeline + current location / add event |
 | GET/POST | `/api/shipments/{id}/exceptions` | |
 | PATCH | `/api/exceptions/{id}` | status flow, resolution notes |
+| GET | `/api/trade-lanes` | Groups A, B, C with their parameters |
 | GET/POST | `/api/carriers`, `/api/locations` | POST = admin |
 
 Status codes: `200/201` success, `401` unauthenticated, `403` forbidden, `404` not found, `422` validation, `429` throttled.
@@ -170,11 +195,23 @@ CI (`.github/workflows/ci.yml`) runs the test suite and the asset build on every
 
 **Live demo:** _add your URL here_ · **Demo account:** `customer@cargotrace.test` / _password_
 
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `could not find driver` | Enable the `pdo_mysql` PHP extension (Laragon: right-click → PHP → Extensions). |
+| `Access denied for user` / `Unknown database` | Check `DB_*` in `.env` and create the empty `cargotrace` database. |
+| Cannot log in | Run `php artisan migrate:fresh --seed`; accounts and password are listed above and in `docs/DEMO_DATA.md`. |
+| Blank or 500 page after changing files or `.env` | `php artisan optimize:clear` |
+| Page without styling | No internet for the Tailwind CDN fallback: run `npm install && npm run build`. |
+| `/api/...` in the browser shows "Unauthenticated." | Expected: the API needs a Bearer token (use Postman). |
+
 ## Project documentation
 
 * [ERD](docs/ERD.md) · [Data dictionary](docs/DATA_DICTIONARY.md) · [Architecture](docs/ARCHITECTURE.md)
 * [API reference](docs/API.md) · [Postman collection](docs/postman/CargoTrace.postman_collection.json)
 * [Test evidence](docs/TEST_EVIDENCE.md) · [Deployment](docs/DEPLOYMENT.md)
+* [Requirements traceability](docs/REQUIREMENTS_TRACEABILITY.md) · [Demo data](docs/DEMO_DATA.md)
 * [Known limitations & future work](docs/KNOWN_LIMITATIONS.md) · [Attribution](docs/ATTRIBUTION.md)
 
 ## License

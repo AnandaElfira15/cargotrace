@@ -21,15 +21,23 @@ CI runs the same command on every push (`.github/workflows/ci.yml`).
 | Exceptions | `tests/Feature/ExceptionApiTest.php` | create, timeline event, validation, status flow, resolved is final, customer restrictions |
 | External API handling | `tests/Feature/ExternalApiTest.php` | success, empty result, timeout, HTTP 500, unusable payload, authorization |
 | Dashboard from real data | `tests/Feature/DashboardTest.php` | totals, KPIs, scoping per customer, empty database |
+| Optional e-mail notifications | `tests/Feature/EmailNotificationTest.php` | disabled by default, customer vs staff recipients, failure does not break the workflow, e-mail content |
 | Role-based access on web routes | `tests/Feature/WebTest.php` | 403 for forbidden pages, pages render for each role |
+| Web form actions (tracking, exceptions, shipments, carriers, locations, users, settings, audit, notifications) | `tests/Feature/WebActionsTest.php` | valid and invalid submissions, permissions, in-use deletion guards, token revocation, threshold changes |
 
 ## Latest run
 
-> Paste the real output of `php artisan test` here after running it on your machine, plus the date and PHP version.
+Generate the evidence file with one command (PowerShell or any shell), then commit it:
 
+```powershell
+php artisan test > docs/test-output.txt 2>&1
 ```
-(paste output)
-```
+
+Environment of the development runs: PHP 8.2, Laravel 12.x, SQLite in memory. The first full run found two issues
+(a wrong float assertion in a test and a real route-name collision between web and API routes); both were fixed and
+committed (`fix: rename API shipment routes so web links no longer point to /api`).
+
+Final result (update after your last run): `Tests: ___ passed (___ assertions)` on `____-__-__`.
 
 Manual checks performed before submission (tick when done):
 

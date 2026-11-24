@@ -27,13 +27,23 @@ The project skeleton follows the structure of the official Laravel 12 applicatio
 All application code under `app/`, `database/`, `resources/views/`, `routes/` and `tests/` was written for this project.
 Demo data (carriers, customers, shipments, port coordinates) is fictional/synthetic.
 
+## Team and responsibilities
+
+> Fill in before submitting.
+
+| Member | GitHub | Modules explained in the interview |
+|--------|--------|------------------------------------|
+| _Name_ | [AnandaElfira15](https://github.com/AnandaElfira15) | _e.g. tracking and delay rules_ |
+| _Name_ | _username_ | _e.g. authorization and REST API_ |
+
 ## AI assistance disclosure
 
-> **Fill this in honestly before submitting, according to your lecturer's AI policy.**
->
-> Example: "An AI assistant (Claude, by Anthropic) was used to generate the initial project scaffold, services, views and tests.
-> The code was reviewed, run and tested by the team. Team member X is responsible for modules A and B, member Y for C and D.
-> Changes made by the team after generation are visible in the Git history."
+> **Edit this honestly, according to your lecturer's AI policy. Delete this note when done.**
+
+An AI assistant (Claude, by Anthropic) was used to help generate the initial project scaffold, services, views, tests and
+documentation. Automated tests were run locally by the team (`php artisan test`), bugs found during testing were fixed
+(see the Git history, e.g. the route-name collision fix), and the team reviewed the code and is able to explain and modify it.
+All third-party libraries are listed above.
 
 ## External code
 

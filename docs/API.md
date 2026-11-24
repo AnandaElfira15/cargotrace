@@ -38,7 +38,7 @@ Import `docs/postman/CargoTrace.postman_collection.json` into Postman: logging i
 | PUT / PATCH | `/shipments/{id}` | admin; operator while not terminal | re-evaluates delay |
 | DELETE | `/shipments/{id}` | admin | soft delete |
 
-List query parameters: `q` (shipment number), `status`, `carrier_id`, `origin_id`, `destination_id`, `date_from`, `date_to`
+List query parameters: `q` (shipment number), `status`, `carrier_id`, `trade_lane_id`, `origin_id`, `destination_id`, `date_from`, `date_to`
 (on expected departure), `delayed` (`1`/`0`), `sort` (`shipment_number|status|expected_departure_at|expected_arrival_at|delay_hours|created_at`),
 `direction` (`asc|desc`), `per_page` (1-50), `page`.
 
@@ -48,6 +48,7 @@ Create body:
 {
   "customer_id": 3,
   "carrier_id": 1,
+  "trade_lane_id": 1,                // optional: 1 = Group A. Decides the delay thresholds
   "origin_location_id": 1,
   "destination_location_id": 8,
   "cargo_type": "Electronics",
@@ -64,6 +65,7 @@ Response (shortened):
 
 ```json
 { "data": { "id": 12, "shipment_number": "CT261121-04821", "status": "CREATED",
+            "trade_lane": { "id": 1, "code": "A", "name": "Group A", "route": "Southeast Asia → Europe" },
             "delay": { "is_delayed": false, "delay_hours": 0, "severity": null }, "...": "..." } }
 ```
 
@@ -87,7 +89,7 @@ Response (shortened):
 ```
 
 Rules: valid transition only (`CREATED→BOOKED→PICKED_UP→IN_TRANSIT→DELIVERED`, `CREATED/BOOKED→CANCELLED`),
-`occurred_at` not earlier than the latest event and not in the future, terminal shipments accept no events.
+`occurred_at` not earlier than the latest event (compared at minute precision, because the web form has no seconds) and not in the future, terminal shipments accept no events.
 Violations return `422`.
 
 ## Exceptions
@@ -97,6 +99,14 @@ Violations return `422`.
 | GET | `/shipments/{id}/exceptions` | owner, staff |
 | POST | `/shipments/{id}/exceptions` | admin, operator: `type`, `severity`, `description?`, `detected_at?` |
 | PATCH | `/exceptions/{id}` | admin, operator: `status` (`OPEN→INVESTIGATING→RESOLVED`), `severity`, `description`, `resolution_notes`, `resolved_at` |
+
+## Trade lanes (Groups A, B, C)
+
+| Method | Path | Who |
+|--------|------|-----|
+| GET | `/trade-lanes` | any authenticated user: `id, code, name, route, delay_low_max_hours, delay_medium_max_hours, primary_exception, kpi, is_active` |
+
+Lanes are edited by an administrator on the web Settings page. A shipment's `trade_lane_id` must reference an active lane (or be omitted).
 
 ## Reference data
 

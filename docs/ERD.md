@@ -5,6 +5,7 @@ erDiagram
     USERS ||--o{ SHIPMENTS : "customer_id (owns)"
     USERS ||--o{ SHIPMENTS : "created_by"
     CARRIERS ||--o{ SHIPMENTS : "carries"
+    TRADE_LANES |o--o{ SHIPMENTS : "trade_lane_id (optional)"
     LOCATIONS ||--o{ SHIPMENTS : "origin_location_id"
     LOCATIONS ||--o{ SHIPMENTS : "destination_location_id"
     SHIPMENTS ||--o{ SHIPMENT_ITEMS : "contains"
@@ -18,7 +19,8 @@ erDiagram
     USERS ||--o{ AUDIT_LOGS : "actor"
 
     USERS { bigint id PK string email UK string role bool is_active }
-    SHIPMENTS { bigint id PK string shipment_number UK string status datetime expected_arrival_at bool is_delayed decimal delay_hours softDelete deleted_at }
+    TRADE_LANES { bigint id PK string code UK string route decimal delay_medium_max_hours string primary_exception string kpi }
+    SHIPMENTS { bigint id PK bigint trade_lane_id FK string shipment_number UK string status datetime expected_arrival_at bool is_delayed decimal delay_hours softDelete deleted_at }
     TRACKING_EVENTS { bigint id PK bigint shipment_id FK datetime occurred_at string event_type decimal latitude decimal longitude }
     SHIPMENT_EXCEPTIONS { bigint id PK string type string severity string status datetime detected_at datetime resolved_at }
 ```
@@ -29,6 +31,7 @@ erDiagram
 |--------------|-------------|--------|
 | user (customer) → shipments | 1 : N | A customer books many shipments; a shipment belongs to exactly one customer. This is also the ownership rule behind customer authorization (`customer_id = auth user`). |
 | carrier → shipments | 1 : N | One carrier moves many shipments; a shipment uses one carrier in this MVP (multi-leg routing is out of scope). |
+| trade lane → shipments | 1 : N (optional) | A trade lane is one group scenario (A, B or C): route, delay thresholds, main exception and KPI. A shipment belongs to at most one lane (`NULL` = global thresholds); `SET NULL` when a lane is removed so shipments are never lost. |
 | location → shipments (origin, destination) | 1 : N, twice | Two separate foreign keys to the same table; a location can be the origin of some shipments and the destination of others. |
 | shipment → items | 1 : N | A shipment contains many cargo lines. Items are deleted with the shipment (cascade). |
 | shipment → tracking events | 1 : N | **hasMany** because history is append-only; a new status adds a row, it never overwrites the previous one. |
@@ -41,6 +44,7 @@ erDiagram
 
 * **Status lives on `shipments`, history in `tracking_events`.** The column makes filtering and dashboards cheap; the events table is the audit-friendly source of truth. `TrackingService` is the only writer of the status column.
 * **Delay fields are stored (`is_delayed`, `delay_hours`, `delay_severity`)** but derived by `EtaService`, so list filters, sorting and charts do not recalculate on every request. They are re-evaluated on every tracking event, shipment update and by an hourly command.
+* **`trade_lanes` instead of one global group setting.** The brief gives each group different parameters. Storing them as rows lets one application and one database serve Groups A, B and C at the same time; thresholds are nullable so a lane can fall back to the global setting.
 * **Soft delete only on `shipments`.** Deleting a shipment must not destroy its history or break audit references; other tables do not need it.
 * **Polymorphism avoided in `audit_logs`**: `entity_type` + `entity_id` is a plain string/id pair. It is intentionally not a foreign key so logs outlive the entities they describe.
 * **Indexes**: `shipments(status)`, `shipments(is_delayed)`, `shipments(expected_arrival_at)`, `shipments(customer_id, status)`, `tracking_events(shipment_id, occurred_at)`, `shipment_exceptions(status)`, `notifications(user_id, read_at)` support the dashboard, filters, timeline and inbox queries.

@@ -1,37 +1,57 @@
 {
   "info": {
     "name": "CargoTrace API",
-    "description": "Run 'Login (admin)' first; the token is stored automatically. Set baseUrl and, for create/update calls, customerId (a customer user id) and valid carrier/location ids.",
+    "description": "Runs end to end against a freshly seeded database (php artisan migrate:fresh --seed). Run with Postman's Collection Runner or: npx newman run docs/postman/CargoTrace.postman_collection.json. Uses demo accounts; login is limited to 10 requests per minute per IP. laneId = id of trade lane A (1 with the default seeder, which creates A, B and C).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.collectionVariables.set('departure', new Date(Date.now() + 1*86400000).toISOString());",
+          "pm.collectionVariables.set('arrival', new Date(Date.now() + 15*86400000).toISOString());"
+        ]
+      }
+    }
+  ],
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8000"
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "password",
+      "value": "password"
     },
     {
       "key": "token",
       "value": ""
     },
     {
+      "key": "customerId",
+      "value": "3"
+    },
+    {
       "key": "shipmentId",
-      "value": "1"
+      "value": ""
     },
     {
       "key": "exceptionId",
-      "value": "1"
+      "value": ""
     },
     {
-      "key": "customerId",
-      "value": "3"
+      "key": "laneId",
+      "value": "1"
     }
   ],
   "item": [
     {
-      "name": "Auth",
+      "name": "01 Auth",
       "item": [
         {
-          "name": "Register (customer)",
+          "name": "Register customer",
           "request": {
             "method": "POST",
             "header": [
@@ -56,7 +76,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Demo Customer\",\n  \"email\": \"demo.customer@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\"\n}"
+              "raw": "{\n  \"name\": \"Demo Customer\",\n  \"email\": \"demo.{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"admin\"\n}"
             },
             "auth": {
               "type": "noauth"
@@ -68,9 +88,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.token) { pm.collectionVariables.set('token', json.token); }",
-                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('role is forced to customer', () => pm.expect(pm.response.json().user.role).to.eql('customer'));"
                 ]
               }
             }
@@ -102,7 +121,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@cargotrace.test\",\n  \"password\": \"password\"\n}"
+              "raw": "{\n  \"email\": \"admin@cargotrace.test\",\n  \"password\": \"{{password}}\"\n}"
             },
             "auth": {
               "type": "noauth"
@@ -114,101 +133,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.token) { pm.collectionVariables.set('token', json.token); }",
-                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login (operator)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "login"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"operator@cargotrace.test\",\n  \"password\": \"password\"\n}"
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.token) { pm.collectionVariables.set('token', json.token); }",
-                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login (customer)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "login"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"customer@cargotrace.test\",\n  \"password\": \"password\"\n}"
-            },
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.token) { pm.collectionVariables.set('token', json.token); }",
-                  "pm.test('status is 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', pm.response.json().token);"
                 ]
               }
             }
@@ -244,12 +170,29 @@
                 }
               ]
             }
-          }
-        },
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is admin', () => pm.expect(pm.response.json().data.role).to.eql('admin'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Reference data",
+      "item": [
         {
-          "name": "Logout",
+          "name": "List trade lanes (Groups A, B, C)",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Accept",
@@ -257,13 +200,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/logout",
+              "raw": "{{baseUrl}}/api/trade-lanes",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "logout"
+                "trade-lanes"
               ]
             },
             "auth": {
@@ -276,15 +219,322 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lanes A, B, C exist with their own thresholds', () => { const d = pm.response.json().data; pm.expect(d.map(l => l.code)).to.include.members(['A','B','C']); pm.expect(d.find(l => l.code === 'A').delay_medium_max_hours).to.eql(12); pm.expect(d.find(l => l.code === 'B').delay_medium_max_hours).to.eql(18); pm.expect(d.find(l => l.code === 'C').delay_medium_max_hours).to.eql(24); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List carriers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/carriers?per_page=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "carriers"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "5"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create carrier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/carriers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "carriers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Newman Test Line\",\n  \"code\": \"T{{$timestamp}}\",\n  \"mode\": \"sea\",\n  \"contact_email\": \"ops@newman.example\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create carrier with invalid data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/carriers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "carriers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List locations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations?per_page=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "5"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "locations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Newman Test Port\",\n  \"code\": \"L{{$timestamp}}\",\n  \"type\": \"port\",\n  \"country\": \"Singapore\",\n  \"latitude\": 1.3,\n  \"longitude\": 103.8\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "Shipments",
+      "name": "03 Shipments",
       "item": [
         {
-          "name": "List shipments (filters)",
+          "name": "List shipments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('paginated', () => { const j = pm.response.json(); pm.expect(j).to.have.property('meta'); pm.expect(j.data).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List with filters",
           "request": {
             "method": "GET",
             "header": [
@@ -335,7 +585,68 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List shipments of lane B",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments?trade_lane_id=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments"
+              ],
+              "query": [
+                {
+                  "key": "trade_lane_id",
+                  "value": "2"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('only lane B shipments', () => pm.response.json().data.forEach(s => pm.expect(s.trade_lane.code).to.eql('B')));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Create shipment",
@@ -363,7 +674,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"carrier_id\": 1,\n  \"origin_location_id\": 1,\n  \"destination_location_id\": 8,\n  \"cargo_type\": \"Electronics\",\n  \"weight_kg\": 1500.5,\n  \"volume_cbm\": 12.25,\n  \"expected_departure_at\": \"2026-12-01T08:00:00+07:00\",\n  \"expected_arrival_at\": \"2026-12-25T08:00:00+07:00\",\n  \"items\": [\n    {\n      \"description\": \"Laptops\",\n      \"quantity\": 10,\n      \"weight_kg\": 300,\n      \"hs_code\": \"8471.30\"\n    }\n  ]\n}"
+              "raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"carrier_id\": 1,\n  \"origin_location_id\": 1,\n  \"destination_location_id\": 8,\n  \"cargo_type\": \"Electronics\",\n  \"weight_kg\": 1500.5,\n  \"volume_cbm\": 12.25,\n  \"expected_departure_at\": \"{{departure}}\",\n  \"expected_arrival_at\": \"{{arrival}}\",\n  \"items\": [\n    {\n      \"description\": \"Laptops\",\n      \"quantity\": 10,\n      \"weight_kg\": 300,\n      \"hs_code\": \"8471.30\"\n    }\n  ],\n  \"trade_lane_id\": {{laneId}}\n}"
             },
             "auth": {
               "type": "bearer",
@@ -382,9 +693,59 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const j = pm.response.json();",
-                  "if (j.data) pm.collectionVariables.set('shipmentId', j.data.id);",
-                  "pm.test('created', () => pm.response.to.have.status(201));"
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201)); pm.test('belongs to lane A', () => pm.expect(j.data.trade_lane.code).to.eql('A'));",
+                  "const j = pm.response.json(); pm.collectionVariables.set('shipmentId', j.data.id); pm.test('starts as CREATED', () => pm.expect(j.data.status).to.eql('CREATED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create shipment with invalid dates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"carrier_id\": 1,\n  \"origin_location_id\": 1,\n  \"destination_location_id\": 8,\n  \"cargo_type\": \"Electronics\",\n  \"weight_kg\": 1500.5,\n  \"volume_cbm\": 12.25,\n  \"expected_departure_at\": \"{{departure}}\",\n  \"expected_arrival_at\": \"{{departure}}\",\n  \"items\": [\n    {\n      \"description\": \"Laptops\",\n      \"quantity\": 10,\n      \"weight_kg\": 300,\n      \"hs_code\": \"8471.30\"\n    }\n  ]\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
                 ]
               }
             }
@@ -421,7 +782,18 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Update shipment (PATCH)",
@@ -450,7 +822,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"cargo_type\": \"Machinery\",\n  \"estimated_arrival_at\": \"2026-12-26T20:00:00+07:00\"\n}"
+              "raw": "{\n  \"cargo_type\": \"Machinery\"\n}"
             },
             "auth": {
               "type": "bearer",
@@ -462,82 +834,27 @@
                 }
               ]
             }
-          }
-        },
-        {
-          "name": "Delete shipment (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('updated', () => pm.expect(pm.response.json().data.cargo_type).to.eql('Machinery'));"
+                ]
               }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "shipments",
-                "{{shipmentId}}"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
             }
-          }
+          ]
         }
       ]
     },
     {
-      "name": "Tracking",
+      "name": "04 Tracking",
       "item": [
         {
-          "name": "Timeline",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/tracking",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "shipments",
-                "{{shipmentId}}",
-                "tracking"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Add status event (BOOKED)",
+          "name": "Add status event BOOKED",
           "request": {
             "method": "POST",
             "header": [
@@ -564,7 +881,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"event_type\": \"STATUS_UPDATE\",\n  \"status\": \"BOOKED\",\n  \"occurred_at\": \"2026-11-20T10:00:00+07:00\",\n  \"description\": \"Booking confirmed\"\n}"
+              "raw": "{\n  \"event_type\": \"STATUS_UPDATE\",\n  \"status\": \"BOOKED\",\n  \"occurred_at\": \"{{$isoTimestamp}}\",\n  \"description\": \"Booking confirmed\"\n}"
             },
             "auth": {
               "type": "bearer",
@@ -576,7 +893,18 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Add location event",
@@ -606,7 +934,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"event_type\": \"LOCATION_UPDATE\",\n  \"occurred_at\": \"2026-11-20T12:00:00+07:00\",\n  \"latitude\": 1.2644,\n  \"longitude\": 103.8222,\n  \"description\": \"At Singapore anchorage\"\n}"
+              "raw": "{\n  \"event_type\": \"LOCATION_UPDATE\",\n  \"occurred_at\": \"{{$isoTimestamp}}\",\n  \"latitude\": 1.2644,\n  \"longitude\": 103.8222,\n  \"description\": \"At Singapore anchorage\"\n}"
             },
             "auth": {
               "type": "bearer",
@@ -618,10 +946,21 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Invalid transition (expect 422)",
+          "name": "Invalid transition BOOKED to DELIVERED",
           "request": {
             "method": "POST",
             "header": [
@@ -648,7 +987,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"event_type\": \"STATUS_UPDATE\",\n  \"status\": \"DELIVERED\",\n  \"occurred_at\": \"2026-11-20T13:00:00+07:00\"\n}"
+              "raw": "{\n  \"event_type\": \"STATUS_UPDATE\",\n  \"status\": \"DELIVERED\",\n  \"occurred_at\": \"{{$isoTimestamp}}\"\n}"
             },
             "auth": {
               "type": "bearer",
@@ -667,19 +1006,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('422 for invalid transition', () => pm.response.to.have.status(422));"
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
                 ]
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "Exceptions",
-      "item": [
+        },
         {
-          "name": "List exceptions",
+          "name": "Timeline is chronological and complete",
           "request": {
             "method": "GET",
             "header": [
@@ -689,7 +1023,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/exceptions",
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/tracking",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -697,7 +1031,7 @@
                 "api",
                 "shipments",
                 "{{shipmentId}}",
-                "exceptions"
+                "tracking"
               ]
             },
             "auth": {
@@ -710,8 +1044,25 @@
                 }
               ]
             }
-          }
-        },
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json(); pm.test('3 events (created, booked, location)', () => pm.expect(j.data.length).to.eql(3)); pm.test('current location present', () => pm.expect(j.meta.current_location).to.not.eql(null));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Exceptions",
+      "item": [
         {
           "name": "Report exception",
           "request": {
@@ -759,15 +1110,60 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const j = pm.response.json();",
-                  "if (j.data) pm.collectionVariables.set('exceptionId', j.data.id);"
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('exceptionId', pm.response.json().data.id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Update exception",
+          "name": "List exceptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/exceptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments",
+                "{{shipmentId}}",
+                "exceptions"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolve exception",
           "request": {
             "method": "PATCH",
             "header": [
@@ -805,15 +1201,78 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolved exception cannot change",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/exceptions/{{exceptionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "exceptions",
+                "{{exceptionId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "Reference data",
+      "name": "06 Authorization",
       "item": [
         {
-          "name": "List carriers",
+          "name": "No token is rejected",
           "request": {
             "method": "GET",
             "header": [
@@ -823,19 +1282,94 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/carriers?q=Pacific",
+              "raw": "{{baseUrl}}/api/shipments",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "carriers"
+                "shipments"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": [
+                "{{baseUrl}}"
               ],
-              "query": [
-                {
-                  "key": "q",
-                  "value": "Pacific"
-                }
+              "path": [
+                "api",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@cargotrace.test\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer lists own shipments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments"
               ]
             },
             "auth": {
@@ -848,10 +1382,169 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Create carrier (admin)",
+          "name": "Customer reads own shipment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments",
+                "{{shipmentId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer cannot create shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"{{customerId}}\",\n  \"carrier_id\": 1,\n  \"origin_location_id\": 1,\n  \"destination_location_id\": 8,\n  \"cargo_type\": \"Electronics\",\n  \"weight_kg\": 1500.5,\n  \"volume_cbm\": 12.25,\n  \"expected_departure_at\": \"{{departure}}\",\n  \"expected_arrival_at\": \"{{arrival}}\",\n  \"items\": [\n    {\n      \"description\": \"Laptops\",\n      \"quantity\": 10,\n      \"weight_kg\": 300,\n      \"hs_code\": \"8471.30\"\n    }\n  ]\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer cannot add tracking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}/tracking",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments",
+                "{{shipmentId}}",
+                "tracking"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_type\": \"NOTE\",\n  \"occurred_at\": \"{{$isoTimestamp}}\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer cannot create carrier",
           "request": {
             "method": "POST",
             "header": [
@@ -876,7 +1569,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Blue Wave Lines\",\n  \"code\": \"BWL\",\n  \"mode\": \"sea\",\n  \"contact_email\": \"ops@bluewave.example\"\n}"
+              "raw": "{\n  \"name\": \"X\",\n  \"code\": \"X1\",\n  \"mode\": \"sea\"\n}"
             },
             "auth": {
               "type": "bearer",
@@ -888,42 +1581,21 @@
                 }
               ]
             }
-          }
-        },
-        {
-          "name": "List locations",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
               }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/locations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "locations"
-              ]
-            },
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
             }
-          }
+          ]
         },
         {
-          "name": "Create location (admin)",
+          "name": "Login (operator)",
           "request": {
             "method": "POST",
             "header": [
@@ -937,18 +1609,56 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/locations",
+              "raw": "{{baseUrl}}/api/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "locations"
+                "login"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Port of Tanjung Pelepas\",\n  \"code\": \"MYTPP\",\n  \"type\": \"port\",\n  \"city\": \"Johor\",\n  \"country\": \"Malaysia\",\n  \"latitude\": 1.3626,\n  \"longitude\": 103.5469\n}"
+              "raw": "{\n  \"email\": \"operator@cargotrace.test\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Operator cannot delete shipment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments",
+                "{{shipmentId}}"
+              ]
             },
             "auth": {
               "type": "bearer",
@@ -960,7 +1670,199 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 Cleanup",
+      "item": [
+        {
+          "name": "Login (admin) again",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@cargotrace.test\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete shipment (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments",
+                "{{shipmentId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deleted shipment is gone",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shipments/{{shipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shipments",
+                "{{shipmentId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

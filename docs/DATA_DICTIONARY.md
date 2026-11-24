@@ -35,6 +35,19 @@ Types are MySQL types. "Enum" columns are stored as strings and validated by PHP
 | country | varchar(100), indexed | |
 | latitude / longitude | decimal(10,7) | validated −90..90 / −180..180 |
 
+## trade_lanes
+| Column | Type | Notes |
+|--------|------|-------|
+| id | bigint PK | |
+| code | varchar(10) UNIQUE | `A`, `B`, `C` |
+| name | varchar(255) | e.g. `Group A` |
+| route | varchar(255) | e.g. `Southeast Asia → Europe` |
+| delay_low_max_hours | decimal(6,2) null | LOW up to this many hours; null = global setting |
+| delay_medium_max_hours | decimal(6,2) null | MEDIUM up to this, HIGH above; null = global setting |
+| primary_exception | varchar(30) | `ExceptionType` value preselected in the exception form and counted per lane |
+| kpi | varchar(40) | `on_time_delivery_rate`, `average_delay_duration` or `exception_resolution_time` |
+| is_active | boolean | inactive lanes cannot be assigned to new shipments |
+
 ## shipments
 | Column | Type | Notes |
 |--------|------|-------|
@@ -42,6 +55,7 @@ Types are MySQL types. "Enum" columns are stored as strings and validated by PHP
 | shipment_number | varchar(30) UNIQUE | auto-generated `CTyymmdd-NNNNN` when omitted |
 | customer_id | FK users | owner, drives authorization |
 | carrier_id | FK carriers | |
+| trade_lane_id | FK trade_lanes null | group scenario of the shipment; decides the delay thresholds (`SET NULL` on delete) |
 | origin_location_id / destination_location_id | FK locations | must differ |
 | cargo_type | varchar(100) | |
 | weight_kg / volume_cbm | decimal(12,2) | > 0 |
