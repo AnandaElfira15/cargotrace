@@ -1,12 +1,12 @@
 ﻿
    PASS  Tests\Unit\StatusRulesTest
-  Γ£ô valid shipment transitions with data set #0                                                          0.60s  
+  Γ£ô valid shipment transitions with data set #0
   Γ£ô valid shipment transitions with data set #1
   Γ£ô valid shipment transitions with data set #2
   Γ£ô valid shipment transitions with data set #3
   Γ£ô valid shipment transitions with data set #4
   Γ£ô valid shipment transitions with data set #5
-  Γ£ô invalid shipment transitions with data set #0                                                        0.02s  
+  Γ£ô invalid shipment transitions with data set #0
   Γ£ô invalid shipment transitions with data set #1
   Γ£ô invalid shipment transitions with data set #2
   Γ£ô invalid shipment transitions with data set #3
@@ -18,19 +18,150 @@
   Γ£ô invalid shipment transitions with data set #9
   Γ£ô invalid shipment transitions with data set #10
   Γ£ô terminal statuses
-  Γ£ô exception status flow                                                                                0.03s  
+  Γ£ô exception status flow
 
    PASS  Tests\Feature\AuthApiTest
-  Γ£ô register always creates a customer even if role is sent                                             11.24s  
-  Γ£ô register validates input                                                                             0.39s  
-  Γ£ô login with valid credentials returns a token                                                         1.32s  
-  Γ£ô login with invalid credentials is rejected                                                           0.06s  
-  Γ£ô inactive account cannot login                                                                        0.04s  
-  Γ£ô protected endpoints require authentication                                                           0.63s  
-  Γ£ô authenticated user can read profile and logout revokes token                                         0.24s  
-  Γ£ô unknown api route returns json 404 without stack trace                                               0.08s  
+  Γ£ô register always creates a customer even if role is sent                                              0.35s  
+  Γ£ô register validates input                                                                             0.02s  
+  Γ£ô login with valid credentials returns a token                                                         0.03s  
+  Γ£ô login with invalid credentials is rejected                                                           0.02s  
+  Γ£ô inactive account cannot login                                                                        0.02s  
+  Γ£ô protected endpoints require authentication                                                           0.02s  
+  Γ£ô authenticated user can read profile and logout revokes token                                         0.02s  
+  Γ£ô unknown api route returns json 404 without stack trace                                               0.01s  
 
    PASS  Tests\Feature\DashboardTest
-  Γ£ô dashboard numbers come from the database                                                             0.90s  
-  Γ£ô customer dashboard is scoped to own shipments                                                        0.02s  
+  Γ£ô dashboard numbers come from the database                                                             0.05s  
+  Γ£ô customer dashboard is scoped to own shipments                                                        0.03s  
   Γ£ô empty database gives zeroes and null kpis instead of errors                                          0.01s  
+
+   PASS  Tests\Feature\DoctorCommandTest
+  Γ£ô doctor passes when everything is in place                                                            1.67s  
+  Γ£ô doctor fails when demo data is missing                                                               0.01s  
+  Γ£ô doctor reports external service failures without crashing                                            0.61s  
+
+   PASS  Tests\Feature\EmailNotificationTest
+  Γ£ô no email is sent by default but the in app notification is created                                   0.33s  
+  Γ£ô customer gets a status email when enabled but staff do not                                           0.25s  
+  Γ£ô staff and customer get an email when an exception is opened                                          0.05s  
+  Γ£ô a mail failure does not break the workflow                                                           0.02s  
+  Γ£ô the email contains the message and a link to the shipment                                            1.79s  
+
+   PASS  Tests\Feature\EtaDelayTest
+  Γ£ô delay and severity rules with data set "early"                                                       0.02s  
+  Γ£ô delay and severity rules with data set "exactly on time"                                             0.01s  
+  Γ£ô delay and severity rules with data set "3 hours"                                                     0.04s  
+  Γ£ô delay and severity rules with data set "6 hours is still l o w"                                      0.02s  
+  Γ£ô delay and severity rules with data set "6.5 hours"                                                   0.02s  
+  Γ£ô delay and severity rules with data set "24 hours is still m e d i u m"                               0.01s  
+  Γ£ô delay and severity rules with data set "24.5 hours"                                                  0.01s  
+  Γ£ô delay and severity rules with data set "72 hours"                                                    0.02s  
+  Γ£ô threshold is configurable per group                                                                  0.02s  
+  Γ£ô explanation contains the values used                                                                 0.02s  
+  Γ£ô moving shipment past its eta is late by at least now                                                 0.01s  
+  Γ£ô shipment that has not started is not marked late by the clock                                        0.01s  
+  Γ£ô delivered shipment uses actual arrival                                                               0.01s  
+  Γ£ô evaluate persists the result and notifies the customer once                                          0.02s  
+  Γ£ô evaluate delays command flags overdue shipments                                                      0.02s  
+
+   PASS  Tests\Feature\ExceptionApiTest
+  Γ£ô operator reports an exception and it appears in the timeline                                         0.44s  
+  Γ£ô exception input is validated                                                                         0.01s  
+  Γ£ô customer cannot report or update exceptions                                                          0.25s  
+  Γ£ô exception goes open investigating resolved and resolved is final                                     0.11s  
+  Γ£ô unauthenticated access is rejected                                                                   0.03s  
+
+   PASS  Tests\Feature\ExternalApiTest
+  Γ£ô geocoding returns normalised results                                                                 0.06s  
+  Γ£ô geocoding handles empty results                                                                      0.01s  
+  Γ£ô geocoding handles timeouts                                                                           0.13s  
+  Γ£ô geocoding handles error responses                                                                    0.02s  
+  Γ£ô geocoding is staff only and validates input                                                          0.03s  
+  Γ£ô weather is returned for authorised users                                                             0.02s  
+  Γ£ô weather failure is reported without crashing                                                         0.02s  
+  Γ£ô weather without usable data is reported                                                              0.02s  
+  Γ£ô customer cannot request weather for someone elses shipment                                           0.03s  
+
+   PASS  Tests\Feature\ShipmentApiTest
+  Γ£ô operator can create a shipment with initial tracking event and audit log                             0.45s  
+  Γ£ô create validates required fields and business rules                                                  0.03s  
+  Γ£ô status cannot be set through create                                                                  0.02s  
+  Γ£ô customer cannot create update or delete                                                              0.09s  
+  Γ£ô customer only sees own shipments                                                                     0.25s  
+  Γ£ô staff can see all shipments                                                                          0.03s  
+  Γ£ô only admin can delete and delete is soft                                                             0.12s  
+  Γ£ô update validates dates against stored values                                                         0.03s  
+  Γ£ô delayed eta flags the shipment on update                                                             0.02s  
+  Γ£ô search filter sort and pagination work on the server                                                 0.10s  
+  Γ£ô only admin can create carriers and locations                                                         0.18s  
+
+   PASS  Tests\Feature\TrackingApiTest
+  Γ£ô full valid lifecycle is recorded in order                                                            0.15s  
+  Γ£ô invalid status transition is rejected and nothing is stored                                          0.03s  
+  Γ£ô terminal status cannot go back to an earlier status                                                  0.02s  
+  Γ£ô status is required for status updates                                                                0.03s  
+  Γ£ô event time must not be earlier than the latest event or in the future                                0.04s  
+  Γ£ô history is append only and current location follows the newest valid event                           0.04s  
+  Γ£ô estimated arrival in event triggers delay detection                                                  0.03s  
+  Γ£ô customer cannot add events but can read own timeline only                                            0.03s  
+
+   PASS  Tests\Feature\TradeLaneTest
+  Γ£ô each group applies its own delay threshold                                                           0.07s  
+  Γ£ô the low limit is also per lane                                                                       0.03s  
+  Γ£ô a lane without thresholds falls back to the global values                                            0.03s  
+  Γ£ô the explanation names the rule set that was used                                                     0.03s  
+  Γ£ô changing the lane of a shipment re evaluates the delay                                               0.06s  
+  Γ£ô api lists the trade lanes                                                                            0.08s  
+  Γ£ô a shipment can be created with a lane and filtered by it                                             0.07s  
+  Γ£ô an unknown or inactive lane is rejected                                                              0.04s  
+  Γ£ô the dashboard breaks the numbers down per lane and can filter by lane                                0.07s  
+  Γ£ô a customer only sees their own numbers in the lane breakdown                                         0.06s  
+  Γ£ô the dashboard page shows the lane table and the lane filter                                          0.76s  
+  Γ£ô the shipment list can be filtered by lane and shows the lane code                                    0.75s  
+  Γ£ô the shipment page and form show the lane                                                             1.07s  
+  Γ£ô the exception form preselects the main exception of the lane                                         0.04s  
+  Γ£ô admin edits the parameters of each lane                                                              0.27s  
+  Γ£ô lane settings are validated and admin only                                                           0.16s  
+  Γ£ô the demo seeder builds groups a b and c together                                                     2.59s  
+
+   PASS  Tests\Feature\WebActionsTest
+  Γ£ô operator adds a valid tracking event through the web form                                            0.08s  
+  Γ£ô event in the same minute as the previous one is accepted                                             0.03s  
+  Γ£ô customer cannot use the tracking or exception forms                                                  0.06s  
+  Γ£ô operator reports and resolves an exception through the web                                           0.34s  
+  Γ£ô admin updates and deletes a shipment through the web                                                 0.03s  
+  Γ£ô operator cannot delete a shipment                                                                    0.05s  
+  Γ£ô customer list shows only their own shipments                                                         0.03s  
+  Γ£ô shipment list filters by status and delay                                                            0.04s  
+  Γ£ô admin manages carriers through the web                                                               0.06s  
+  Γ£ô carrier in use cannot be deleted                                                                     0.02s  
+  Γ£ô admin manages locations through the web                                                              0.06s  
+  Γ£ô location in use cannot be deleted                                                                    0.02s  
+  Γ£ô admin creates and updates users                                                                      0.06s  
+  Γ£ô admin cannot demote or deactivate themselves                                                         0.02s  
+  Γ£ô deactivating a user revokes api tokens and blocks login                                              0.02s  
+  Γ£ô admin changes delay thresholds and they take effect                                                  0.03s  
+  Γ£ô threshold validation and permissions                                                                 0.03s  
+  Γ£ô audit log filters work                                                                               0.14s  
+  Γ£ô opening a notification marks it read and goes to the shipment                                        0.05s  
+  Γ£ô dashboard page contains the chart containers and group kpi                                           0.02s  
+  Γ£ô location form offers coordinate lookup and shipment page offers weather                              0.13s  
+
+   PASS  Tests\Feature\WebTest
+  Γ£ô web and api route names do not collide                                                               0.03s  
+  Γ£ô guests are redirected to login                                                                       0.15s  
+  Γ£ô user can login and logout                                                                            0.09s  
+  Γ£ô invalid login shows an error                                                                         0.22s  
+  Γ£ô customer can self register as customer only                                                          0.03s  
+  Γ£ô every role can open the dashboard                                                                    0.06s  
+  Γ£ô role based access is enforced on the server                                                          0.08s  
+  Γ£ô admin pages render                                                                                   0.51s  
+  Γ£ô operator creates a shipment through the web form and views it                                        0.07s  
+  Γ£ô customer cannot open another customers shipment page                                                 0.02s  
+  Γ£ô invalid status transition from the web form shows a validation error                                 0.02s  
+  Γ£ô notifications are listed and can be marked read                                                      0.03s  
+  Γ£ô user cannot mark someone elses notification as read                                                  0.02s  
+
+  Tests:    137 passed (603 assertions)
+  Duration: 17.58s
+
