@@ -1,0 +1,36 @@
+﻿
+   PASS  Tests\Unit\StatusRulesTest
+  Γ£ô valid shipment transitions with data set #0                                                          0.60s  
+  Γ£ô valid shipment transitions with data set #1
+  Γ£ô valid shipment transitions with data set #2
+  Γ£ô valid shipment transitions with data set #3
+  Γ£ô valid shipment transitions with data set #4
+  Γ£ô valid shipment transitions with data set #5
+  Γ£ô invalid shipment transitions with data set #0                                                        0.02s  
+  Γ£ô invalid shipment transitions with data set #1
+  Γ£ô invalid shipment transitions with data set #2
+  Γ£ô invalid shipment transitions with data set #3
+  Γ£ô invalid shipment transitions with data set #4
+  Γ£ô invalid shipment transitions with data set #5
+  Γ£ô invalid shipment transitions with data set #6
+  Γ£ô invalid shipment transitions with data set #7
+  Γ£ô invalid shipment transitions with data set #8
+  Γ£ô invalid shipment transitions with data set #9
+  Γ£ô invalid shipment transitions with data set #10
+  Γ£ô terminal statuses
+  Γ£ô exception status flow                                                                                0.03s  
+
+   PASS  Tests\Feature\AuthApiTest
+  Γ£ô register always creates a customer even if role is sent                                             11.24s  
+  Γ£ô register validates input                                                                             0.39s  
+  Γ£ô login with valid credentials returns a token                                                         1.32s  
+  Γ£ô login with invalid credentials is rejected                                                           0.06s  
+  Γ£ô inactive account cannot login                                                                        0.04s  
+  Γ£ô protected endpoints require authentication                                                           0.63s  
+  Γ£ô authenticated user can read profile and logout revokes token                                         0.24s  
+  Γ£ô unknown api route returns json 404 without stack trace                                               0.08s  
+
+   PASS  Tests\Feature\DashboardTest
+  Γ£ô dashboard numbers come from the database                                                             0.90s  
+  Γ£ô customer dashboard is scoped to own shipments                                                        0.02s  
+  Γ£ô empty database gives zeroes and null kpis instead of errors                                          0.01s  
